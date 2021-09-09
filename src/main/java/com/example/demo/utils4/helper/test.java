@@ -29,8 +29,8 @@ public class test {
                 System.out.println(l);
                 i++;
             }
-            DecimalFormat ds = new DecimalFormat("0");
-            System.out.println(ds.format(list.get(0).getREC_ID()).trim());
+//            DecimalFormat ds = new DecimalFormat("0");
+//            System.out.println(ds.format(list.get(0).getREC_ID()).trim());
             csvBeanReader.close();
         } catch (Exception e) {
             e.printStackTrace();

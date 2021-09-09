@@ -12,6 +12,7 @@ import org.apache.poi.ss.util.CellReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,6 +21,8 @@ import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 public class ExcelUtil {
@@ -534,6 +537,51 @@ public class ExcelUtil {
         }
         return list;
     }
+
+
+
+    public static <T> Collection<T> csvReader(BufferedReader in) throws IOException {
+        ArrayList<ArrayList<String>> columns = new ArrayList<ArrayList<String>>();
+        BufferedReader br = null;
+        String sCurrentLine;
+        List<T> list = new ArrayList<>();
+        // 读取表格第一行作为map中的key
+        String key = in.readLine();
+
+        List<String> keyList = Arrays.stream(key.split(","))
+                .filter(Objects::nonNull)
+                .filter(string -> !string.isEmpty())
+                .map(e -> e.replaceAll("\"", ""))
+                .collect(Collectors.toList());
+
+        String s = null;
+        int line = 1;
+        while ((s = in.readLine()) != null) {
+            // 从第二行开始读取数据作为value
+            List<String> param = Arrays.stream(s.split(","))
+                    .map(e -> e.replaceAll("\"", ""))
+                    .collect(Collectors.toList());
+
+            line++;
+            // 对参数进行核查，存在空数据提醒
+//            if (keyList.size() != param.size()) {
+//                System.out.println("数据第" + line + "行存在空数据,请核查！");
+//                continue;
+//            }
+            // 组装key和value作为map
+            // 方法一
+            Map<String, String> keyParam = IntStream
+                    .range(0, param.size())
+                    .collect(HashMap::new,
+                            (m, i) -> m.put(keyList.get(i), param.get(i)), (m1, m2) -> {
+                            });
+            list.add((T) keyParam);
+
+        }
+        return list;
+    }
+
+
 
     /**
      * 驗證Cell類型是否正確
