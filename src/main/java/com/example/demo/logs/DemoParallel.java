@@ -27,7 +27,6 @@ public class DemoParallel {
         return 2 * n;
     }
 
-
     @Benchmark
     public int doubleAndSumSequential() {
         return IntStream.of(3, 1, 4, 1, 5, 9)

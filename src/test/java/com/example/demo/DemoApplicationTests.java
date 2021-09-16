@@ -2,6 +2,7 @@ package com.example.demo;
 
 import com.example.demo.ac.entity.*;
 import com.example.demo.ac.mapper.*;
+import com.example.demo.ac.service.*;
 import com.example.demo.utils.AddrCreateUtil;
 import com.example.demo.utils.NameCreateUtil;
 import com.example.demo.utils2.ExcelLogs;
@@ -9,6 +10,7 @@ import com.example.demo.utils2.ExcelUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -17,6 +19,9 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -25,21 +30,22 @@ import java.util.stream.Collectors;
 class DemoApplicationTests {
 
     @Autowired
-    public  CaseListMapper caseListMapper;
+    public CaseListService caseListService;
     @Autowired
-    public  CaseDataReadMapper caseDataReadMapper;
+    public CaseDataReadService caseDataReadService;
     @Autowired
-    public  CaseDataSslMapper caseDataSslMapper;
+    public CaseDataSslService caseDataSslService;
     @Autowired
-    public  CaseDeviceMeterMapper caseDeviceMeterMapper;
+    public CaseDeviceMeterService caseDeviceMeterService;
     @Autowired
-    public  CaseDeviceRtuMapper caseDeviceRtuMapper;
+    public CaseDeviceRtuService caseDeviceRtuService;
     @Autowired
-    public  CaseCustomerMapper caseCustomerMapper;
+    public  CaseCustomerService caseCustomerService;
     @Autowired
-    public  CaseTransformerMapper caseTransformerMapper;
+    public  CaseTransformerService caseTransformerService;
     @Autowired
-    public  CaseTransfornerLinelossMapper caseTransfornerLinelossMapper;
+    public  CaseTransfornerLinelossService caseTransfornerLinelossService;
+
 
     static Collection<Map> TG = new ArrayList<>();
     static Collection<Map> JLD = new ArrayList<>();
@@ -159,6 +165,7 @@ class DemoApplicationTests {
 
         Map cus;
         Map cus1;
+        Set<String> zd_set = new HashSet<>();
         //导入顺序 1.生成案例 一个台区生成一个案例  CaseTransformer & CaseList
         for(Map m : TG){
             String caseid = String.valueOf(UUID.randomUUID()).replace("-", "");
@@ -174,6 +181,7 @@ class DemoApplicationTests {
             caseTransformers.add(new CaseTransformer(){{
                 setTransformerid(m.get("TG_ID").toString());
                 setTransformeCode(m.get("TG_NO").toString());
+                setTransformeCapacity(m.get("TG_CAP").toString());
                 setTransformeName("台区" + (caseTransformers.size() + 1));
                 setManager(m.get("SYS_USER_NO").toString());
                 setCommunityid(units.get(caseTransformers.size()));
@@ -188,6 +196,9 @@ class DemoApplicationTests {
             List<Map> JLD_TQ = JLD.stream().sequential()
                     .filter(e ->  e.get("TG_ID") != null && e.get("TG_ID").equals(m.get("TG_ID")))
                     .collect(Collectors.toList());
+
+            //用途过滤
+            JLD_TQ = JLD_TQ.stream().sequential().filter(e -> e.get("USAGE_TYPE_CODE").equals("01") || e.get("USAGE_TYPE_CODE").equals("02")).collect(Collectors.toList());
 
             for(Map c : JLD_TQ){
                 List<Map> user = USER.stream().filter(e -> e.get("CONS_ID").equals(c.get("CONS_ID")))
@@ -244,24 +255,25 @@ class DemoApplicationTests {
 
                     //填入终端数据
                     cus = zd.get(0);
-                    CaseDeviceRtu deviceRtu = new CaseDeviceRtu();
-                    deviceRtu.setRtuid(cus.get("TERMINAL_ID").toString());
-                    deviceRtu.setRtuName("终端" + (caseDeviceRtus.size() + 1));
-                    deviceRtu.setRtuAddress(cus.get("TERMINAL_ADDR").toString());
-                    deviceRtu.setReadScheme(cus.get("COLL_MODE").toString());
-                    deviceRtu.setRtuType(Integer.parseInt(cus.get("TERMINAL_TYPE_CODE").toString()));
-                    deviceRtu.setAssetCode(cus.get("ASSET_NO").toString());
-                    deviceRtu.setProtocol(Integer.parseInt(cus.get("PROTOCOL_CODE").toString()));
-                    deviceRtu.setManufacturer(Integer.parseInt(cus.get("FACTORY_CODE").toString()));
-                    deviceRtu.setModel(Integer.parseInt(cus.get("ID").toString()));
-                    deviceRtu.setUpSide(Integer.parseInt(cus.get("CHANNEL_UP").toString()));
-                    deviceRtu.setDownSide(Integer.parseInt(cus.get("CHANNEL_DOWN").toString()));
-                    deviceRtu.setCreateTime(LocalDateTime.now());
-                    deviceRtu.setOrgid(cus.get("ORG_NO").toString());
-                    deviceRtu.setCaseid(caseid);
-                    caseDeviceRtus.add(deviceRtu);
-
-
+                    boolean terminal_id = zd_set.add(cus.get("TERMINAL_ID").toString());
+                    if(terminal_id){
+                        CaseDeviceRtu deviceRtu = new CaseDeviceRtu();
+                        deviceRtu.setRtuid(cus.get("TERMINAL_ID").toString());
+                        deviceRtu.setRtuName("终端" + (caseDeviceRtus.size() + 1));
+                        deviceRtu.setRtuAddress(cus.get("TERMINAL_ADDR").toString());
+                        deviceRtu.setReadScheme(cus.get("COLL_MODE").toString());
+                        deviceRtu.setRtuType(Integer.parseInt(cus.get("TERMINAL_TYPE_CODE").toString()));
+                        deviceRtu.setAssetCode(cus.get("ASSET_NO").toString());
+                        deviceRtu.setProtocol(Integer.parseInt(cus.get("PROTOCOL_CODE").toString()));
+                        deviceRtu.setManufacturer(Integer.parseInt(cus.get("FACTORY_CODE").toString()));
+                        deviceRtu.setModel(Integer.parseInt(cus.get("ID").toString()));
+                        deviceRtu.setUpSide(Integer.parseInt(cus.get("CHANNEL_UP").toString()));
+                        deviceRtu.setDownSide(Integer.parseInt(cus.get("CHANNEL_DOWN").toString()));
+                        deviceRtu.setCreateTime(new Date());
+                        deviceRtu.setOrgid(cus.get("ORG_NO").toString());
+                        deviceRtu.setCaseid(caseid);
+                        caseDeviceRtus.add(deviceRtu);
+                    }
 
                     //添入电能表    计算 只记录正向有功和反向有功
                     List<Map> dn = METER.stream().sequential()
@@ -295,7 +307,7 @@ class DemoApplicationTests {
                     caseDeviceMeters.add(deviceMeter);
 
 
-                    List<Map> collect = new ArrayList<>(TG_METER);
+//                    List<Map> collect = new ArrayList<>(TG_METER);
 
                     //添入电能数据
                     List<Map> METER_DN = TG_METER.stream()
@@ -312,7 +324,7 @@ class DemoApplicationTests {
                         if(!dnsj.get("RAP_R").equals(""))
                             Direct = 2;
 
-                        LocalDateTime data_date = transformLocalData(dnsj.get("COL_TIME").toString());
+                        Date data_date = transformDate(dnsj.get("COL_TIME").toString());
 
 
                         caseDataReads.add(new CaseDataRead(){{
@@ -398,17 +410,17 @@ class DemoApplicationTests {
                             List<Map> pf_data = PF_data.stream().filter(e -> e.get("DATA_DATE").equals(Date)).collect(Collectors.toList());
 
 
-                            caseDataSsl.setMeterid(cl.get("SP_ID").toString());
+                            caseDataSsl.setMeterid(cl.get("SP_OBJ_ID").toString());
 
                             String VV = "U" + vi;
                             //电压
                             for (Map ssl_v : v_date){
                                 if(ssl_v.get("PHASE_FLAG").equals("1")){
-                                    caseDataSsl.setVA(new BigDecimal(ssl_v.get(VV).toString() == null ?ssl_v.get(VV).toString() : "0"));
+                                    caseDataSsl.setVA(new BigDecimal(ssl_v.get(VV).toString() == null || ssl_v.get(VV).toString().equals("") ?  "0" : ssl_v.get(VV).toString()));
                                 }else if(ssl_v.get("PHASE_FLAG").equals("2")){
-                                    caseDataSsl.setVB(new BigDecimal(ssl_v.get(VV).toString() == null ?ssl_v.get(VV).toString() : "0"));
+                                    caseDataSsl.setVB(new BigDecimal(ssl_v.get(VV).toString() == null || ssl_v.get(VV).toString().equals("") ? "0" : ssl_v.get(VV).toString()));
                                 }else{
-                                    caseDataSsl.setVC(new BigDecimal(ssl_v.get(VV).toString() == null ?ssl_v.get(VV).toString() : "0"));
+                                    caseDataSsl.setVC(new BigDecimal(ssl_v.get(VV).toString() == null || ssl_v.get(VV).toString().equals("") ? "0" : ssl_v.get(VV).toString()));
                                 }
                             }
 
@@ -416,11 +428,11 @@ class DemoApplicationTests {
                             //电流
                             for (Map ssl_a : a_data){
                                 if(ssl_a.get("PHASE_FLAG").equals("1")){
-                                    caseDataSsl.setIA(new BigDecimal(ssl_a.get(II).toString() == null ?ssl_a.get(II).toString() : "0"));
+                                    caseDataSsl.setIA(new BigDecimal(ssl_a.get(II).toString() == null || ssl_a.get(II).toString().equals("")? "0":ssl_a.get(II).toString()));
                                 }else if(ssl_a.get("PHASE_FLAG").equals("2")){
-                                    caseDataSsl.setIB(new BigDecimal(ssl_a.get(II).toString() == null ?ssl_a.get(II).toString() : "0"));
+                                    caseDataSsl.setIB(new BigDecimal(ssl_a.get(II).toString() == null || ssl_a.get(II).toString().equals("")? "0":ssl_a.get(II).toString()));
                                 }else{
-                                    caseDataSsl.setIC(new BigDecimal(ssl_a.get(II).toString() == null ?ssl_a.get(II).toString() : "0"));
+                                    caseDataSsl.setIC(new BigDecimal(ssl_a.get(II).toString() == null || ssl_a.get(II).toString().equals("")?"0":ssl_a.get(II).toString()));
                                 }
                             }
 
@@ -429,21 +441,21 @@ class DemoApplicationTests {
                             //有功，无功功率
                             for (Map ssl_q : q_data){
                                 if(ssl_q.get("DATA_TYPE").equals("1")){
-                                    caseDataSsl.setP(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setP(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("")?  "0":ssl_q.get(Q).toString()));
                                 }else if(ssl_q.get("DATA_TYPE").equals("2")){
-                                    caseDataSsl.setPA(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setPA(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("")? "0":ssl_q.get(Q).toString()));
                                 }else if (ssl_q.get("DATA_TYPE").equals("3")){
-                                    caseDataSsl.setPB(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setPB(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("")? "0":ssl_q.get(Q).toString()));
                                 }else if(ssl_q.get("DATA_TYPE").equals("4")){
-                                    caseDataSsl.setPC(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setPC(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("")? "0":ssl_q.get(Q).toString()));
                                 }else if(ssl_q.get("DATA_TYPE").equals("5")){
-                                    caseDataSsl.setQ(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setQ(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("")? "0":ssl_q.get(Q).toString()));
                                 } else if(ssl_q.get("DATA_TYPE").equals("6")){
-                                    caseDataSsl.setQA(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setQA(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("")? "0":ssl_q.get(Q).toString()));
                                 }else if(ssl_q.get("DATA_TYPE").equals("7")){
-                                    caseDataSsl.setQB(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setQB(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("")? "0":ssl_q.get(Q).toString()));
                                 }else if(ssl_q.get("DATA_TYPE").equals("8")){
-                                    caseDataSsl.setQC(new BigDecimal(ssl_q.get(Q).toString() == null ? ssl_q.get(Q).toString() : "0"));
+                                    caseDataSsl.setQC(new BigDecimal(ssl_q.get(Q).toString() == null || ssl_q.get(Q).toString().equals("") ? "0":ssl_q.get(Q).toString()));
                                 }
                             }
 
@@ -452,21 +464,21 @@ class DemoApplicationTests {
                                 //功率因素
                                 for (Map ssl_pf : pf_data) {
                                     if (ssl_pf.get("PHASE_FLAG").equals("0")){
-                                        caseDataSsl.setPf(new BigDecimal(ssl_pf.get(PF).toString() == null ? ssl_pf.get(PF).toString() : "0"));
+                                        caseDataSsl.setPf(new BigDecimal(ssl_pf.get(PF).toString() == null || ssl_pf.get(PF).toString().equals("")? "0" : ssl_pf.get(PF).toString()));
                                     }else if(ssl_pf.get("PHASE_FLAG").equals("1")){
-                                        caseDataSsl.setPfA(new BigDecimal(ssl_pf.get(PF).toString() == null ? ssl_pf.get(PF).toString() : "0"));
+                                        caseDataSsl.setPfA(new BigDecimal(ssl_pf.get(PF).toString() == null || ssl_pf.get(PF).toString().equals("")? "0" : ssl_pf.get(PF).toString()));
                                     }else if(ssl_pf.get("PHASE_FLAG").equals("2")){
-                                        caseDataSsl.setPfB(new BigDecimal(ssl_pf.get(PF).toString() == null ? ssl_pf.get(PF).toString() : "0"));
+                                        caseDataSsl.setPfB(new BigDecimal(ssl_pf.get(PF).toString() == null || ssl_pf.get(PF).toString().equals("")? "0" : ssl_pf.get(PF).toString()));
                                     }else if(ssl_pf.get("PHASE_FLAG").equals("3")){
-                                        caseDataSsl.setPfC(new BigDecimal(ssl_pf.get(PF).toString() == null ? ssl_pf.get(PF).toString() : "0"));
+                                        caseDataSsl.setPfC(new BigDecimal(ssl_pf.get(PF).toString() == null || ssl_pf.get(PF).toString().equals("")? "0" : ssl_pf.get(PF).toString()));
                                     }
                                 }
                             }
 
-                            LocalDateTime of = LocalDateTime.of(startTime.get(Calendar.YEAR), startTime.get(Calendar.MONTH) + 1, startTime.get(Calendar.DAY_OF_MONTH),
-                                    startTime.get(Calendar.HOUR), startTime.get(Calendar.MINUTE), startTime.get(Calendar.SECOND));
+//                            LocalDateTime of = LocalDateTime.of(startTime.get(Calendar.YEAR), startTime.get(Calendar.MONTH) + 1, startTime.get(Calendar.DAY_OF_MONTH),
+//                                    startTime.get(Calendar.HOUR), startTime.get(Calendar.MINUTE), startTime.get(Calendar.SECOND));
 
-
+                            Date of = startTime.getTime();
                             caseDataSsl.setDataTime(of);
                             caseDataSsl.setCaseid(caseid);
                             startTime.add(Calendar.MINUTE, minute);
@@ -478,38 +490,138 @@ class DemoApplicationTests {
                     }
                 }
             }
+
+
+
+        //生成每个台区的线损数据
+        //确定电能标编号，并更具台区id进行分组
+        List<Map> jld_tq = JLD.stream().sequential().filter(e -> e.get("TG_ID").equals(m.get("TG_ID"))).collect(Collectors.toList());
+        List<List<Map>> tq_user = new ArrayList<>();
+        List<Map> Z_METER = new ArrayList<>();
+        for (Map jt : jld_tq) {
+            //查找对应的测量点
+            List<Map> jld_cld = JLD_CLD.stream().sequential().filter(e -> e.get("MP_ID").equals(jt.get("MP_ID"))).collect(Collectors.toList());
+            List<Map> cld = new ArrayList<>();
+            List<Map> tg_meter = new ArrayList<>();
+            if(jld_cld.size() != 0){
+                cld = CL.stream().sequential().filter(e -> e.get("SP_OBJ_ID").equals(jld_cld.get(0).get("METER_ID"))).collect(Collectors.toList());
+            }
+            if(cld.size() != 0){
+                List<Map> finalCld = cld;
+                tg_meter = LOSS_DATA.stream().sequential()
+                        .filter(s -> s.get("ID_GROUP") != null)
+                        .filter(e -> e.get("ID_GROUP").equals(finalCld.get(0).get("SP_ID")))
+                        .filter(e -> e.get("READ_TYPE_CODE").equals("1"))
+                        .collect(Collectors.toList());
+            }
+            if(tg_meter.size() != 0){
+                if(jt.get("USAGE_TYPE_CODE").equals("02")){
+                    Z_METER = tg_meter;
+                }else {
+                    tq_user.add(tg_meter);
+                }
+            }
         }
 
+        //计算线损率等
+        double gr = 0.0;
+        double gc = 0.0;
+        double lineloss;
+        Calendar startTime = Calendar.getInstance();
+        Calendar endTime = Calendar.getInstance();
 
-//        for(CaseList c : caseList){
-//            System.out.println(c);
+        startTime.setTime(transformDate(Z_METER.get(0).get("STAT_DATE").toString()));
+        endTime.setTime(transformDate(Z_METER.get(Z_METER.size() - 1).get("STAT_DATE").toString()));
+        while (startTime.compareTo(endTime) <= 0){
+            CaseTransfornerLineloss cls = new CaseTransfornerLineloss();
+            List<Map> stat_date = Z_METER.stream().filter(e -> {
+                try {
+                    return transformDate(e.get("STAT_DATE").toString()).equals(startTime.getTime());
+                } catch (ParseException parseException) {
+                    parseException.printStackTrace();
+                }
+                return false;
+            }).collect(Collectors.toList());
+            if (stat_date.size() > 0)
+                gr = Double.parseDouble(stat_date.get(0).get("COLL_PQ").toString());
+            for (List<Map> meter : tq_user) {
+                List<Map> fb_meter = meter.stream().filter(e -> {
+                    try {
+                        return transformDate(e.get("STAT_DATE").toString()).equals(startTime.getTime());
+                    } catch (ParseException parseException) {
+                        parseException.printStackTrace();
+                    }
+                    return false;
+                }).collect(Collectors.toList());
+                if (fb_meter.size() > 0)
+                    gc += Double.parseDouble(fb_meter.get(0).get("COLL_PQ").toString());
+            }
+            lineloss = (gr - gc) / gr;
+            UUID uuid = UUID.randomUUID();
+            cls.setTransformerLossId(String.valueOf(uuid).replace("-", ""));
+            cls.setTransformerid(m.get("TG_ID").toString());
+            cls.setCycle(3);
+            cls.setSuppleyEnergy(new BigDecimal(gr));
+            cls.setSaleEnergy(new BigDecimal(gc));
+            cls.setLossEnergy(new BigDecimal(gr - gc));
+            cls.setLossRate(new BigDecimal(lineloss));
+            cls.setDatatime(startTime.getTime());
+            cls.setCaseid(caseid);
+            caseTransfornerLinelosses.add(cls);
+            gr = 0;
+            gc = 0;
+
+            startTime.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        }
+
+        //过滤重复用户
+        caseCustomers = caseCustomers.stream().sequential().filter(distinctByKey(CaseCustomer::getCustmerid)).collect(Collectors.toList());
+
+        //批量插入数据
+//        caseListService.saveBatch(caseList);
+//        caseCustomerService.saveBatch(caseCustomers);
+//        caseDataReadService.saveBatch(caseDataReads);
+//        caseDataSslService.saveBatch(caseDataSsls);
+//        caseDeviceMeterService.saveBatch(caseDeviceMeters);
+//        caseDeviceRtuService.saveBatch(caseDeviceRtus);
+//        System.out.println(caseTransformers.size());
+//        caseTransformerService.saveBatch(caseTransformers);
+//        caseTransfornerLinelossService.saveBatch(caseTransfornerLinelosses);
+
+
+
+//        Map<String, List<CaseCustomer>> collect = caseCustomers.stream().collect(Collectors.groupingBy(CaseCustomer::getCustmerid));
+//        for (String caseCustomer : collect.keySet()) {
+//            System.out.println(caseCustomer + " " + collect.get(caseCustomer));
 //        }
 
-//        for (CaseTransformer c : caseTransformers){
-//            System.out.println(c);
-//        }
-//
-//        for (CaseDeviceMeter c : caseDeviceMeters) {
-//            System.out.println(c);
-//        }
-//
-//        for (CaseCustomer c : caseCustomers){
-//            System.out.println(c);
-//        }
-//
-//        for (CaseDataRead c : caseDataReads){
-//            System.out.println(c);
+
+//        Map<String, List<CaseDataRead>> collect = caseDataReads.stream().collect(Collectors.groupingBy(CaseDataRead::getMeterid));
+//        for (String caseCustomer : collect.keySet()) {
+//            if(caseCustomer.equals("1000000108898165")){
+//                collect.get(caseCustomer).forEach(System.out::println);
+//            }
 //        }
 
 
+//        Map<String, List<CaseDeviceRtu>> collect = caseDeviceRtus.stream().sequential().collect(Collectors.groupingBy(CaseDeviceRtu::getRtuid));
+//        for (String caseCustomer : collect.keySet()) {
+//            System.out.println(caseCustomer + " " + collect.get(caseCustomer).size());
+//        }
 
+        caseTransfornerLinelosses.forEach(System.out::println);
 
 
     }
 
 
 
-
+    private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+        Map<Object, Boolean> seen = new ConcurrentHashMap<>();
+        return t -> seen.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
+    }
 
 
 

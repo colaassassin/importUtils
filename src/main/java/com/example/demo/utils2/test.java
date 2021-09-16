@@ -375,6 +375,87 @@ public class test {
     public void sc() {
         String s =  "01";
         System.out.println(Integer.parseInt(s));
+
+//        //生成每个台区的线损数据
+//        //确定电能标编号，并更具台区id进行分组
+//        List<Map> jld_tq = JLD.stream().sequential().filter(e -> e.get("TG_ID").equals(m.get("TG_ID"))).collect(Collectors.toList());
+//        List<List<Map>> tq_user = new ArrayList<>();
+//        List<Map> Z_METER = new ArrayList<>();
+//        for (Map jt : jld_tq) {
+//            //查找对应的测量点
+//            List<Map> jld_cld = JLD_CLD.stream().sequential().filter(e -> e.get("MP_ID").equals(jt.get("MP_ID"))).collect(Collectors.toList());
+//            List<Map> cld = new ArrayList<>();
+//            List<Map> tg_meter = new ArrayList<>();
+//            if(jld_cld.size() != 0){
+//                cld = CL.stream().sequential().filter(e -> e.get("SP_OBJ_ID").equals(jld_cld.get(0).get("METER_ID"))).collect(Collectors.toList());
+//            }
+//            if(cld.size() != 0){
+//                List<Map> finalCld = cld;
+//                tg_meter = LOSS_DATA.stream().sequential()
+//                        .filter(s -> s.get("ID_GROUP") != null)
+//                        .filter(e -> e.get("ID_GROUP").equals(finalCld.get(0).get("SP_ID")))
+//                        .filter(e -> e.get("READ_TYPE_CODE").equals("1"))
+//                        .collect(Collectors.toList());
+//            }
+//            if(tg_meter.size() != 0){
+//                if(jt.get("USAGE_TYPE_CODE").equals("02")){
+//                    Z_METER = tg_meter;
+//                }else {
+//                    tq_user.add(tg_meter);
+//                }
+//            }
+//        }
+//
+//        //计算线损率等
+//        double gr = 0.0;
+//        double gc = 0.0;
+//        double lineloss;
+//        Calendar startTime = Calendar.getInstance();
+//        Calendar endTime = Calendar.getInstance();
+//
+//        startTime.setTime(transformDate(Z_METER.get(0).get("STAT_DATE").toString()));
+//        endTime.setTime(transformDate(Z_METER.get(Z_METER.size() - 1).get("STAT_DATE").toString()));
+//        while (startTime.compareTo(endTime) <= 0){
+//            CaseTransfornerLineloss cls = new CaseTransfornerLineloss();
+//            List<Map> stat_date = Z_METER.stream().filter(e -> {
+//                try {
+//                    return transformDate(e.get("STAT_DATE").toString()).equals(startTime.getTime());
+//                } catch (ParseException parseException) {
+//                    parseException.printStackTrace();
+//                }
+//                return false;
+//            }).collect(Collectors.toList());
+//            if (stat_date.size() > 0)
+//                gr = Double.parseDouble(stat_date.get(0).get("COLL_PQ").toString());
+//            for (List<Map> meter : tq_user) {
+//                List<Map> fb_meter = meter.stream().filter(e -> {
+//                    try {
+//                        return transformDate(e.get("STAT_DATE").toString()).equals(startTime.getTime());
+//                    } catch (ParseException parseException) {
+//                        parseException.printStackTrace();
+//                    }
+//                    return false;
+//                }).collect(Collectors.toList());
+//                if (fb_meter.size() > 0)
+//                    gc += Double.parseDouble(fb_meter.get(0).get("COLL_PQ").toString());
+//            }
+//            lineloss = (gr - gc) / gr;
+//            UUID uuid = UUID.randomUUID();
+//            cls.setTransformerLossId(String.valueOf(uuid).replace("-", ""));
+//            cls.setTransformerid(m.get("TG_ID").toString());
+//            cls.setCycle(3);
+//            cls.setSuppleyEnergy(new BigDecimal(gr));
+//            cls.setSaleEnergy(new BigDecimal(gc));
+//            cls.setLossEnergy(new BigDecimal(gr - gc));
+//            cls.setLossRate(new BigDecimal(lineloss));
+//            cls.setDatatime(startTime.getTime());
+//            cls.setCaseid(caseid);
+//            caseTransfornerLinelosses.add(cls);
+//            gr = 0;
+//            gc = 0;
+//
+//            startTime.add(Calendar.DAY_OF_MONTH, 1);
+//        }
     }
 
 
